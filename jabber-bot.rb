@@ -23,6 +23,7 @@ STATII = {}
 def process_xmpp_incoming
   JABBER.presence_updates { |user, status, message| STATII[user] = status }
   JABBER.received_messages do |msg|
+    puts "<<< Received message from #{msg.from} #{msg.body}"
     JABBER.deliver msg.from,
       "Sorry, I don't understand you.  I'm just here to tell you about stuff."
   end
