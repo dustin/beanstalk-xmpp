@@ -8,6 +8,9 @@ require 'beanstalk-client'
 CONF = YAML.load_file 'jabber-bot.yml'
 
 JABBER = Jabber::Simple.new(CONF['xmpp']['jid'], CONF['xmpp']['pass'])
+JABBER.send!(Jabber::Presence.new(nil,
+  CONF['xmpp']['status'] || 'In service',
+  (CONF['xmpp']['priority'] || 1).to_i))
 
 BEANSTALK = Beanstalk::Pool.new [CONF['beanstalk']['server']]
 BEANSTALK.watch CONF['beanstalk']['tube']
