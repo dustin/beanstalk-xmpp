@@ -5,7 +5,18 @@ require 'date'
 require 'xmpp4r-simple'
 require 'beanstalk-client'
 
-CONF = YAML.load_file 'jabber-bot.yml'
+CONF_PATHS = [
+  "jabber-bot.yml", "/usr/local/etc/jabber-bot.yml", "/etc/jabber-bot.yml"
+]
+
+CONF_PATH = CONF_PATHS.detect { |f| File.exist? f }
+
+unless CONF_PATH
+  puts "Expected to find a config in one of\n\t#{CONF_PATHS.join("\n\t")}"
+  exit 1
+end
+
+CONF = YAML.load_file CONF_PATH
 
 JABBER = Jabber::Simple.new(CONF['xmpp']['jid'], CONF['xmpp']['pass'])
 JABBER.send!(Jabber::Presence.new(nil,
