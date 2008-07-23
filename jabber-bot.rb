@@ -2,6 +2,7 @@
 
 require 'rubygems'
 require 'date'
+require 'set'
 require 'xmpp4r-simple'
 require 'beanstalk-client'
 
@@ -24,34 +25,15 @@ BEANSTALK.ignore 'default'
 
 TIMEOUT = CONF['general']['timeout'].to_i
 
-STATII = {}
-USER_STATUS = Hash.new :on
-
-def process_xmpp_incoming(jabber)
-  jabber.presence_updates { |user, status, message| STATII[user] = status }
-  jabber.received_messages
-  jabber.new_subscriptions { |from, presence| puts "Subscribed by #{from}" }
-  jabber.subscription_requests { |from, presence| puts "Sub req from #{from}" }
-end
-
-def process_job(jabber, job)
-  to, msg = job.body.split(/\s+/, 2)
-  msg = msg.strip
-  puts "Got #{msg} for #{to}"
-  if to == 'status'
-    jabber.status nil, msg
-  else
-    if STATII.has_key?(to) && ! [:dnd, :unavailable].include?(STATII[to])
-      puts "Delivering message to #{to} #{STATII[to]}"
-      jabber.deliver to, msg
-    end
-  end
-end
-
 class MyClient < Jabber::Simple
 
   def initialize(jid, pass)
     super(jid, pass)
+
+    @statii = {}
+    @user_status = Hash.new :on
+    @ignoring = Hash.new {|h,k| h[k] = Set.new; h[k]}
+
     setup_callback
   end
     
@@ -62,12 +44,54 @@ class MyClient < Jabber::Simple
     setup_callback
   end
 
+  def willing_to_receive(jid, to)
+    !([:dnd, :unavailable].include?(@statii[jid]) || @ignoring[to].include?(jid))
+  end
+
+  def process_job(job)
+    to, msg = job.body.split(/\s+/, 2)
+    msg = msg.strip
+    puts "Got #{msg} for #{to}"
+    if to == 'status'
+      status nil, msg
+    else
+      @statii.keys.each do |jid|
+        if willing_to_receive(jid, to)
+          puts "Delivering message to #{jid} (#{@statii[jid]})"
+          deliver jid, msg
+        end
+      end
+    end
+  end
+
+  def process_xmpp_incoming
+    presence_updates { |user, status, message| @statii[user] = status }
+    received_messages
+    new_subscriptions { |from, presence| puts "Subscribed by #{from}" }
+    subscription_requests { |from, presence| puts "Sub req from #{from}" }
+  end
+
+  def cmd_ignore(from, group)
+    @ignoring[group] << from.bare.to_s
+    deliver from, "You're now ignoring ``#{group}''"
+  end
+
+  def cmd_watch(from, group)
+    @ignoring[group].delete from.bare.to_s
+    deliver from, "You're no longer ignoring ``#{group}''"
+  end
+
   def setup_callback
     client.add_message_callback do |msg|
       begin
+        cmd, args = msg.body.split /\s+/, 2
         puts "<<< Received message from #{msg.from} #{msg.body}"
-        deliver msg.from,
-          "Sorry, I don't understand you.  I'm just here to tell you about stuff."
+        cmd_method = "cmd_#{cmd}".to_sym
+        if self.respond_to? cmd_method
+          self.send cmd_method, msg.from, args
+        else
+          deliver msg.from, "I don't understand #{cmd}"
+        end
       rescue StandardError, Interrupt
         puts "Incoming message error:  #{$!}\n" + $!.backtrace.join("\n\t")
         $stdout.flush
@@ -87,8 +111,8 @@ def run_loop(jabber)
   end
   puts "Processing #{job} at #{Time.now.to_s}"
   $stdout.flush
-  process_xmpp_incoming jabber
-  process_job jabber, job if job
+  jabber.process_xmpp_incoming
+  jabber.process_job job if job
 rescue StandardError, Interrupt
   puts "Got exception:  #{$!.inspect}"
   sleep 5
