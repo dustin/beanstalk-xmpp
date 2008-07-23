@@ -81,6 +81,15 @@ class MyClient < Jabber::Simple
     deliver from, "You're no longer ignoring ``#{group}''"
   end
 
+  def cmd_ignoring(from, whatever)
+    i=@ignoring.to_a.select{|k,v| v.include? from.bare.to_s}.map{|k,v| k}.sort
+    if i.empty?
+      deliver from, "You're not ignoring anything."
+    else
+      deliver from, "Ignoring: #{i.join ', '}"
+    end
+  end
+
   def setup_callback
     client.add_message_callback do |msg|
       begin
