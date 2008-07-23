@@ -93,13 +93,15 @@ class MyClient < Jabber::Simple
   def setup_callback
     client.add_message_callback do |msg|
       begin
-        cmd, args = msg.body.split /\s+/, 2
-        puts "<<< Received message from #{msg.from} #{msg.body}"
-        cmd_method = "cmd_#{cmd}".to_sym
-        if self.respond_to? cmd_method
-          self.send cmd_method, msg.from, args
-        else
-          deliver msg.from, "I don't understand #{cmd}"
+        unless msg.body.nil?
+          puts "<<< Received message from #{msg.from} #{msg.body}"
+          cmd, args = msg.body.split /\s+/, 2
+          cmd_method = "cmd_#{cmd}".to_sym
+          if self.respond_to? cmd_method
+            self.send cmd_method, msg.from, args
+          else
+            deliver msg.from, "I don't understand #{cmd}"
+          end
         end
       rescue StandardError, Interrupt
         puts "Incoming message error:  #{$!}\n" + $!.backtrace.join("\n\t")
