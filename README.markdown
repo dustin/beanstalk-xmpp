@@ -15,9 +15,11 @@ is set to `dnd` (do not disturb).
 
     [recipient] [various text]
 
-`recipient` may be either `status` to update the bot's status, or an IM name
-to send an IM to that user.  The remaining text is what gets set as the status
-or delivered.
+`recipient` may be either `status` to update the bot's status, or an arbitrary
+group name.  Anyone who's on the bot's roster will receive the message unless
+they've specifically ignored it.
+
+The remaining text is what gets set as the status or delivered.
 
 ## Examples
 
@@ -27,4 +29,4 @@ or delivered.
 
 ### Sending an IM
 
-    user@example.com Holy crap, something just went wrong.
+    problem Holy crap, something just went wrong.
