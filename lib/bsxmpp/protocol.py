@@ -57,9 +57,37 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
     def onMessage(self, msg):
         if hasattr(msg, "body") and msg.body and msg["type"] == 'chat':
             self.typing_notification(msg['from'])
-            a=unicode(msg.body).split(' ', 1)
-            # XXX:  ignore, watch, ignoring
-            self.send_plain(msg['from'], 'Incoming not handled yet.', 'error')
+            a=unicode(msg.body).split(' ', 2)
+            f=None
+            try:
+                f=getattr(self, "cmd_" + a[0])
+            except AttributeError:
+                self.send_plain(msg['from'],
+                    "Unknown command: %s (try help)" % a[0])
+
+            if f:
+                f(msg['from'], *a[1:])
+
+    def cmd_ignore(self, jid, group):
+        "ignore a group"
+        self.send_plain(jid, "You're now ignoring " + group)
+
+    def cmd_watch(self, jid, group):
+        "watch (stop ignoring) a group"
+        self.send_plain(jid, "You're now watching " + group)
+
+    def cmd_ignoring(self, jid):
+        "list all the groups you're ignoring"
+        self.send_plain(jid, "Stuff you're ignoring: (don't know yet)")
+
+    def cmd_help(self, jid):
+        "this help"
+        helptext=["Help on commands"]
+        for c in sorted(dir(self)):
+            if c.find("cmd_") == 0:
+                f = getattr(self, c)
+                helptext.append("%s:  %s" % (c[4:], f.__doc__))
+        self.send_plain(jid, "\n".join(helptext))
 
     # presence stuff
     def availableReceived(self, entity, show=None, statuses=None, priority=0):
