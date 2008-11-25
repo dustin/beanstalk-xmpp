@@ -50,7 +50,9 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
     def broadcast(self, msg):
         print "Broadcasting", repr(msg)
         for jid in self.statii.keys():
-            self.send_plain(jid, msg)
+            if jid != config.SCREEN_NAME:
+                print "Sending to", jid
+                self.send_plain(jid, msg)
 
     def onMessage(self, msg):
         if hasattr(msg, "body") and msg.body and msg["type"] == 'chat':
