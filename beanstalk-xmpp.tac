@@ -11,6 +11,7 @@ from wokkel.generic import VersionHandler
 
 from bsxmpp import config
 from bsxmpp import protocol
+from bsxmpp import bs
 
 application = service.Application("beanstalk-xmpp")
 
@@ -27,5 +28,8 @@ bp=protocol.BeanstalkXMPPProtocol()
 bp.setHandlerParent(xmppclient)
 VersionHandler('beanstalk-xmpp', config.VERSION).setHandlerParent(xmppclient)
 protocol.KeepAlive().setHandlerParent(xmppclient)
+
+b = bs.connectBeanstalk(bp, 'localhost', 11300)
+
 xmppclient.setServiceParent(application)
 

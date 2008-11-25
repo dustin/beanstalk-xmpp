@@ -9,6 +9,8 @@ from wokkel.client import XMPPHandler
 
 import config
 
+import beanstalk
+
 class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
 
     def __init__(self):
@@ -36,21 +38,26 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
 
         self.send(msg)
 
-    def send_plain(self, jid, content):
+    def send_plain(self, jid, content, type='chat'):
         msg = domish.Element((None, "message"))
         msg["to"] = jid
         msg["from"] = config.SCREEN_NAME
-        msg["type"] = 'chat'
+        msg["type"] = type
         msg.addElement("body", content=content)
 
         self.send(msg)
 
+    def broadcast(self, msg):
+        print "Broadcasting", repr(msg)
+        for jid in self.statii.keys():
+            self.send_plain(jid, msg)
+
     def onMessage(self, msg):
-        if msg["type"] == 'chat' and hasattr(msg, "body") and msg.body:
+        if hasattr(msg, "body") and msg.body and msg["type"] == 'chat':
             self.typing_notification(msg['from'])
             a=unicode(msg.body).split(' ', 1)
             # XXX:  ignore, watch, ignoring
-            self.send_plain(msg['from'], 'Incoming not handled yet.')
+            self.send_plain(msg['from'], 'Incoming not handled yet.', 'error')
 
     # presence stuff
     def availableReceived(self, entity, show=None, statuses=None, priority=0):
