@@ -29,7 +29,8 @@ bp.setHandlerParent(xmppclient)
 VersionHandler('beanstalk-xmpp', config.VERSION).setHandlerParent(xmppclient)
 protocol.KeepAlive().setHandlerParent(xmppclient)
 
-b = bs.connectBeanstalk(bp, 'localhost', 11300)
+b = bs.connectBeanstalk(bp, config.CONF.get('beanstalk', 'host'),
+    config.CONF.getint('beanstalk', 'port'))
 
 xmppclient.setServiceParent(application)
 

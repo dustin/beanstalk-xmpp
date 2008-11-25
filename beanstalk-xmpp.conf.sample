@@ -1,3 +1,8 @@
 [xmpp]
 jid: mybot@jabber.org/bsbot
 pass: password4mybot
+
+[beanstalk]
+host: localhost
+port: 11300
+tube: xmpp

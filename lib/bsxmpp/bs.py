@@ -8,6 +8,7 @@ Copyright (c) 2008  Dustin Sallings <dustin@spy.net>
 from twisted.internet import reactor, protocol, defer, task
 
 import beanstalk
+import config
 
 class BSFactory(protocol.ReconnectingClientFactory):
 
@@ -56,7 +57,7 @@ def __executionGenerator(xmpp, bs):
 def __worker(xmpp, coop):
     def f(bs):
         print "Starting worker..."
-        bs.watch("xmpp")
+        bs.watch(config.CONF.get("beanstalk", "tube"))
         bs.ignore("default")
         coop.coiterate(__executionGenerator(xmpp, bs))
     return f
