@@ -63,14 +63,16 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
 
         self.send(msg)
 
-    def willing_to_receive(self, jid):
+    def willing_to_receive(self, jid, group):
+        print "Seeing if %s wants %s" % (jid, group)
         return not (self.statii[jid] in ['dnd', 'unavailable']
-            and jid in self.ignoring)
+            or jid in self.ignoring[group])
 
     def broadcast(self, msg):
         print "Broadcasting", repr(msg)
+        grp, rest = msg.split(' ', 1)
         for jid in self.statii.keys():
-            if jid != config.SCREEN_NAME and self.willing_to_receive(jid):
+            if jid != config.SCREEN_NAME and self.willing_to_receive(jid, grp):
                 print "Sending to", jid
                 self.send_plain(jid, msg)
 
