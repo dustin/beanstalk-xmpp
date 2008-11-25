@@ -1,2 +1,4 @@
-jabber-bot.log
-jabber-bot.yml
+twistd.pid
+twistd.log
+beanstalk-xmpp.conf
+*.pyc
