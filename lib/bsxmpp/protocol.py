@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import sets
+
 from twisted.internet import task
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
@@ -11,6 +13,18 @@ import config
 
 import beanstalk
 
+class DefaultDict(dict):
+    def __getitem__(self, k):
+        try:
+            return dict.__getitem__(self, k)
+        except KeyError:
+            if self.f:
+                v = self.f(k)
+                self[k] = v
+                return v
+            else:
+                raise
+
 class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
 
     def __init__(self):
@@ -20,6 +34,8 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
         MessageProtocol.connectionInitialized(self)
         PresenceClientProtocol.connectionInitialized(self)
         self.statii = {}
+        self.ignoring = DefaultDict()
+        self.ignoring.f = lambda x: sets.Set()
 
     def connectionMade(self):
         print "Connected!"
@@ -47,10 +63,14 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
 
         self.send(msg)
 
+    def willing_to_receive(self, jid):
+        return not (self.statii[jid] in ['dnd', 'unavailable']
+            and jid in self.ignoring)
+
     def broadcast(self, msg):
         print "Broadcasting", repr(msg)
         for jid in self.statii.keys():
-            if jid != config.SCREEN_NAME:
+            if jid != config.SCREEN_NAME and self.willing_to_receive(jid):
                 print "Sending to", jid
                 self.send_plain(jid, msg)
 
@@ -70,15 +90,22 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
 
     def cmd_ignore(self, jid, group):
         "ignore a group"
+        self.ignoring[group].add(jid)
         self.send_plain(jid, "You're now ignoring " + group)
 
     def cmd_watch(self, jid, group):
         "watch (stop ignoring) a group"
+        self.ignoring[group].remove(jid)
         self.send_plain(jid, "You're now watching " + group)
 
     def cmd_ignoring(self, jid):
         "list all the groups you're ignoring"
-        self.send_plain(jid, "Stuff you're ignoring: (don't know yet)")
+        rv = ["Stuff you're ignoring"]
+        for k,v in self.ignoring.iteritems():
+            if jid in v:
+                rv.append("- " + k)
+
+        self.send_plain(jid, '\n'.join(rv))
 
     def cmd_help(self, jid):
         "this help"
