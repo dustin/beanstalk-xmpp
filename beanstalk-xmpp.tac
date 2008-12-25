@@ -9,6 +9,7 @@ from twisted.internet import task, reactor
 from twisted.words.protocols.jabber import jid
 from wokkel.client import XMPPClient
 from wokkel.generic import VersionHandler
+from wokkel.keepalive import KeepAlive
 
 from bsxmpp import config
 from bsxmpp import protocol
@@ -28,7 +29,7 @@ xmppclient.logTraffic = False
 bp=protocol.BeanstalkXMPPProtocol()
 bp.setHandlerParent(xmppclient)
 VersionHandler('beanstalk-xmpp', config.VERSION).setHandlerParent(xmppclient)
-protocol.KeepAlive().setHandlerParent(xmppclient)
+KeepAlive().setHandlerParent(xmppclient)
 
 b = bs.connectBeanstalk(bp, config.CONF.get('beanstalk', 'host'),
     config.CONF.getint('beanstalk', 'port'))
