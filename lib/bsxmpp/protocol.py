@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sets
+from collections import defaultdict
 
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
@@ -11,18 +11,6 @@ import config
 
 import beanstalk
 
-class DefaultDict(dict):
-    def __getitem__(self, k):
-        try:
-            return dict.__getitem__(self, k)
-        except KeyError:
-            if self.f:
-                v = self.f(k)
-                self[k] = v
-                return v
-            else:
-                raise
-
 class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
 
     def __init__(self):
@@ -32,8 +20,7 @@ class BeanstalkXMPPProtocol(MessageProtocol, PresenceClientProtocol):
         MessageProtocol.connectionInitialized(self)
         PresenceClientProtocol.connectionInitialized(self)
         self.statii = {}
-        self.ignoring = DefaultDict()
-        self.ignoring.f = lambda x: sets.Set()
+        self.ignoring = defaultdict(set)
 
     def connectionMade(self):
         print "Connected!"
